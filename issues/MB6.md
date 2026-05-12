@@ -5,7 +5,7 @@
 
 ## Summary
 
-`browser_evaluate` returns an `invalid_union` MCP serialization error when the JS expression evaluates to an empty string `""`. Same root cause as MB5 — the Go MCP serializer cannot produce a valid content union from an empty string. Importantly, `null` and `undefined` results serialize correctly; only `""` triggers the bug.
+`browser_evaluate` returns an `invalid_union` MCP serialization error when the JS expression evaluates to an empty string `""`. Same root cause as [MB5](https://github.com/VibiumDev/vibium/issues/153) — the Go MCP serializer cannot produce a valid content union from an empty string. Importantly, `null` and `undefined` results serialize correctly; only `""` triggers the bug.
 
 ## Repro
 
@@ -46,7 +46,7 @@ Confirmed on 4 of 6 tested sites — specifically when expression returns `""`. 
 
 ## Root cause
 
-Same as MB5: Go MCP content union serializer cannot produce a `text` content block from an empty string — it treats it as `undefined` rather than an empty string value.
+Same as [MB5](https://github.com/VibiumDev/vibium/issues/153): Go MCP content union serializer cannot produce a `text` content block from an empty string — it treats it as `undefined` rather than an empty string value.
 
 ## Workaround
 
