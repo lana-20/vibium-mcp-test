@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against the [vibium](https://www.npmjs.com/package/vibium) MCP server — a browser automation tool built on WebDriver BiDi, exposed as Model Context Protocol tools.
 
-The suite covers **8 confirmed bugs** in the vibium MCP layer, verified across 11 sites. Each test maps to a specific MCP tool failure, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps, error strings, and workarounds.
+The suite covers **8 confirmed bugs** in the vibium MCP layer, verified across 13 sites. Each test maps to a specific MCP tool failure, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps, error strings, and workarounds.
 
 ## Usage
 
@@ -29,7 +29,7 @@ Claude will execute all 8 tests against the running vibium MCP server and print 
 
 ## Cross-site coverage
 
-Bugs are verified across 11 sites:
+Bugs are verified across 13 sites:
 
 | Site | Tests |
 |------|-------|
@@ -41,9 +41,11 @@ Bugs are verified across 11 sites:
 | [automationexercise.com](https://www.automationexercise.com/products) | MB1 |
 | [testpages.eviltester.com](https://testpages.eviltester.com/styled/alerts/alert-test.html) | MB3, MB7 |
 | [automationintesting.online](https://automationintesting.online/#/) | MB7 |
-| [testautomationpractice.blogspot.com](https://testautomationpractice.blogspot.com/) | MB3 |
-| [practicetestautomation.com](https://practicetestautomation.com/practice-test-login/) | MB3, MB5, MB8 |
+| [testautomationpractice.blogspot.com](https://testautomationpractice.blogspot.com/) | MB3, MB7 |
+| [practicetestautomation.com](https://practicetestautomation.com/practice-test-login/) | MB3, MB4, MB5, MB8 |
 | [practice-automation.com](https://practice-automation.com/form-fields/) | MB7 |
+| [demoqa.com](https://demoqa.com/) | MB1, MB2, MB3, MB4, MB5, MB6, MB7, MB8 |
+| [practicesoftwaretesting.com](https://practicesoftwaretesting.com/) | MB1, MB2, MB4, MB5, MB6, MB8 |
 
 ## MB3 — dialog deadlock workarounds
 
@@ -61,7 +63,7 @@ MB3 has two confirmed workarounds:
    browser_click { selector: "#trigger-button" }
    ```
 
-The direct-click pattern (`browser_click` on a button that calls `alert()`/`confirm()`) deadlocks the BiDi socket and requires a `browser_stop` + `browser_start` recovery.
+The direct-click pattern (`browser_click` on a button that calls `alert()`/`confirm()`) deadlocks the BiDi socket and requires a `browser_stop` + `browser_start` recovery. Deadlock confirmed on all tested sites (The Internet, Evil Tester, Blogspot, testtrack.org/alert-demo) — this is a BiDi-level bug, not site-specific.
 
 ## MB5 vs MB6 — serialization errors
 
@@ -74,7 +76,7 @@ Both MB5 and MB6 share the same root cause: the Go MCP layer cannot serialize ce
 | Error | `invalid_union` / `received undefined` | `invalid_union` / `received undefined` |
 | Workaround (MB5) | `browser_evaluate { expression: "el.hasAttribute('x').toString()" }` | — |
 | Workaround (MB6) | — | Ensure expression returns non-empty string; use `JSON.stringify(... ?? null)` |
-| Note | Present string attributes work fine | `null`/`undefined` results serialize correctly; only `""` fails |
+| Note | Present string attributes work fine | `null` results serialize correctly; only empty string `""` fails — title "null/empty/undefined" in original report is inaccurate |
 
 ## Requirements
 

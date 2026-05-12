@@ -91,7 +91,21 @@ browser_count { selector: "button" }
 ```
 PASS if: integer; FAIL if: unmarshal error
 
-PASS (cross-site) if: integer returned on all 5 sites
+```
+# Practice Software Testing — e-commerce site
+browser_navigate { url: "https://practicesoftwaretesting.com/" }
+browser_count { selector: "a" }
+```
+PASS if: integer; FAIL if: unmarshal error
+
+```
+# DemoQA — component library site
+browser_navigate { url: "https://demoqa.com/" }
+browser_count { selector: "div.card" }
+```
+PASS if: integer; FAIL if: unmarshal error
+
+PASS (cross-site) if: integer returned on all 7 sites
 FAIL (cross-site) if: unmarshal error on any site
 
 ---
@@ -141,14 +155,30 @@ browser_storage_state {}
 ```
 PASS if: JSON state returned; FAIL if: unmarshal error
 
-PASS (cross-site) if: JSON state returned on all 4 sites
+```
+# Practice Software Testing — e-commerce with session cookies
+browser_navigate { url: "https://practicesoftwaretesting.com/" }
+browser_storage_state {}
+```
+PASS if: JSON state returned; FAIL if: unmarshal error
+
+```
+# DemoQA — sets analytics/preference cookies
+browser_navigate { url: "https://demoqa.com/" }
+browser_storage_state {}
+```
+PASS if: JSON state returned; FAIL if: unmarshal error
+
+PASS (cross-site) if: JSON state returned on all 6 sites
 FAIL (cross-site) if: unmarshal error on any site
 
 ---
 
 ### MB3 — `browser_dialog_accept` / `browser_dialog_dismiss` — deadlock with `browser_click` (Critical · P1)
 
-**Caution:** if the direct-click test FAILS, the browser session will be deadlocked. Use `browser_stop {}` then `browser_start {}` to recover.
+**Caution:** if the direct-click test FAILS, the browser session will be deadlocked. Use `browser_stop {}` then `browser_start {}` to recover. Allow ~30 seconds before manually quitting if the call does not return.
+
+**Note:** direct click deadlock is confirmed on at least 4 sites: The Internet, Evil Tester, testautomationpractice.blogspot.com, and testtrack.org/alert-demo. It is a BiDi-level bug, not site-specific.
 
 **Direct click test (expected deadlock):**
 ```
@@ -211,6 +241,26 @@ browser_dialog_dismiss {}
 PASS if: `Dialog dismissed`; FAIL if: error or deadlock
 
 ```
+# DemoQA alerts page — alert and confirm dialogs
+browser_navigate { url: "https://demoqa.com/alerts" }
+browser_evaluate { expression: "setTimeout(() => alert('demoqa test'), 300)" }
+browser_dialog_accept {}
+```
+PASS if: `Dialog accepted`; FAIL if: error or deadlock
+
+```
+# testtrack.org alert demo — all three dialog types
+browser_navigate { url: "https://testtrack.org/alert-demo" }
+browser_evaluate { expression: "setTimeout(() => alert('testtrack alert test'), 300)" }
+browser_dialog_accept {}
+browser_evaluate { expression: "setTimeout(() => confirm('testtrack confirm test'), 300)" }
+browser_dialog_dismiss {}
+browser_evaluate { expression: "setTimeout(() => prompt('testtrack prompt test'), 300)" }
+browser_dialog_accept { text: "vibium" }
+```
+PASS if: all three dialogs handled; FAIL if: error or deadlock
+
+```
 # Practice Test Automation — login page (no dialog, but verify dialog tools don't break normal pages)
 browser_navigate { url: "https://practicetestautomation.com/practice-test-login/" }
 browser_dialog_accept {}
@@ -218,7 +268,7 @@ browser_dialog_accept {}
 PASS if: `no such alert` error (expected — no dialog present, tool correctly reports absence)
 FAIL if: browser crashes or session breaks
 
-PASS (cross-site) if: workaround works on all 3 dialog sites; accept/dismiss return correctly on non-dialog site
+PASS (cross-site) if: workaround works on all 5 dialog sites; accept/dismiss return correctly on non-dialog site
 FAIL (cross-site) if: workaround fails or browser deadlocks on any site
 
 ---
@@ -281,7 +331,21 @@ browser_set_cookie { name: "mcp_test", value: "abc123" }
 ```
 PASS if: cookie set; FAIL if: argument error
 
-PASS (cross-site) if: cookie set successfully on all 5 sites
+```
+# DemoQA
+browser_navigate { url: "https://demoqa.com/" }
+browser_set_cookie { name: "mcp_test", value: "abc123" }
+```
+PASS if: cookie set; FAIL if: argument error
+
+```
+# Practice Test Automation
+browser_navigate { url: "https://practicetestautomation.com/practice-test-login/" }
+browser_set_cookie { name: "mcp_test", value: "abc123" }
+```
+PASS if: cookie set; FAIL if: argument error
+
+PASS (cross-site) if: cookie set successfully on all 7 sites
 FAIL (cross-site) if: argument error on any site
 
 ---
@@ -341,20 +405,39 @@ browser_get_attribute { selector: "#username", attribute: "required" }
 ```
 PASS if: returns `""`, `null`, or `"required"` (not an error); FAIL if: `invalid_union` error
 
-PASS (cross-site) if: no serialization errors on any site; absent attributes return empty or null
+```
+# DemoQA text-box — placeholder attr present (should return); disabled attr absent
+browser_navigate { url: "https://demoqa.com/text-box" }
+browser_get_attribute { selector: "#userName", attribute: "placeholder" }
+```
+PASS if: returns `"Full Name"`; FAIL if: `invalid_union` error
+
+```
+browser_get_attribute { selector: "#userName", attribute: "disabled" }
+```
+PASS if: returns `""` or `null` (absent); FAIL if: `invalid_union` error
+
+```
+# Practice Software Testing — absent data attribute
+browser_navigate { url: "https://practicesoftwaretesting.com/" }
+browser_get_attribute { selector: "a", attribute: "data-nonexistent" }
+```
+PASS if: returns `""` or `null`; FAIL if: `invalid_union` error
+
+PASS (cross-site) if: no serialization errors on any site; absent attributes return empty or null; present string attributes return their value
 FAIL (cross-site) if: `invalid_union` error on any absent/null attribute
 
 ---
 
-### MB6 — `browser_evaluate` — null/empty/undefined result causes MCP serialization error (High · P2)
+### MB6 — `browser_evaluate` — empty string result causes MCP serialization error (High · P2)
 
-Same root cause as MB5 — Go cannot serialize null or undefined JS results.
+Shares root cause with MB5. Specifically: `null` and `undefined` JS results serialize correctly, but empty string `""` does not.
 
 ```
 browser_navigate { url: "https://testtrack.org" }
 browser_evaluate { expression: "document.querySelector('#nonexistent')?.id" }
 ```
-PASS if: returns `""`, `null`, `"undefined"`, or any non-error value
+PASS if: returns `null` (null serializes fine)
 FAIL if: `invalid_union` MCP serialization error
 
 ```
@@ -398,8 +481,22 @@ browser_evaluate { expression: "Array.from(document.querySelectorAll('button')).
 ```
 PASS if: returns `""`; FAIL if: `invalid_union` error
 
-PASS (cross-site) if: no serialization errors on any site
-FAIL (cross-site) if: `invalid_union` error on any null/undefined/empty result
+```
+# DemoQA — empty string from filter+join
+browser_navigate { url: "https://demoqa.com/" }
+browser_evaluate { expression: "Array.from(document.querySelectorAll('h5')).filter(h => h.textContent === 'zzz_nonexistent').map(h => h.id).join('')" }
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+```
+# Practice Software Testing — empty string from filter+join
+browser_navigate { url: "https://practicesoftwaretesting.com/" }
+browser_evaluate { expression: "Array.from(document.querySelectorAll('a')).filter(a => a.href === 'https://zzz.nonexistent.example/').map(a => a.textContent).join('')" }
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+PASS (cross-site) if: no `invalid_union` errors; note null results are fine, only empty string `""` triggers the bug
+FAIL (cross-site) if: `invalid_union` error on any empty string result
 
 ---
 
@@ -468,6 +565,20 @@ browser_fill { selector: "textarea", text: "practice automation textarea" }
 ```
 PASS if: fill succeeds; FAIL if: `failed to fill:` error
 
+```
+# DemoQA text-box — textarea for current address
+browser_navigate { url: "https://demoqa.com/text-box" }
+browser_fill { selector: "#currentAddress", text: "demoqa textarea test" }
+```
+PASS if: fill succeeds; FAIL if: `failed to fill:` error
+
+```
+# Automation Testing Practice — textarea on blogspot form
+browser_navigate { url: "https://testautomationpractice.blogspot.com/" }
+browser_fill { selector: "textarea", text: "blogspot textarea test" }
+```
+PASS if: fill succeeds; FAIL if: `failed to fill:` error
+
 PASS (cross-site) if: `browser_fill` works on all textareas found across sites
 FAIL (cross-site) if: `failed to fill:` error on any textarea; workaround (`browser_type`) required
 
@@ -528,7 +639,21 @@ browser_screenshot { annotate: true }
 ```
 PASS if: annotated screenshot; FAIL if: script exception
 
-PASS (cross-site) if: annotated screenshots produced on all 5 sites
+```
+# DemoQA — component library with many interactive elements
+browser_navigate { url: "https://demoqa.com/" }
+browser_screenshot { annotate: true }
+```
+PASS if: annotated screenshot; FAIL if: script exception
+
+```
+# Practice Software Testing — e-commerce with product listing
+browser_navigate { url: "https://practicesoftwaretesting.com/" }
+browser_screenshot { annotate: true }
+```
+PASS if: annotated screenshot; FAIL if: script exception
+
+PASS (cross-site) if: annotated screenshots produced on all 7 sites
 FAIL (cross-site) if: script exception on any site
 
 ---
