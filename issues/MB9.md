@@ -1,6 +1,7 @@
 # browser_get_text — invalid_union error when page/element has no text content (MCP)
 
 **vibium MCP · ChromeDriver 147.0 · macOS darwin 25.3.0**
+**Filed as:** VibiumDev/vibium#157
 
 ## Summary
 
