@@ -83,6 +83,13 @@ MB9: `browser_get_text` reading empty text → `invalid_union`
 
 Same serializer bug. MB9 is less fixable by the caller. Both are resolved by the same underlying fix: treat `""` as a valid empty-string content block rather than coercing it to `undefined`.
 
+## Re-verification history
+
+| Date | Version | Result | Notes |
+|------|---------|--------|-------|
+| 2026-05-18 | v26.3.18 | FAIL (S1–S5, S8–S9) | Initial hardening across 9 scenarios |
+| 2026-05-19 | v26.3.18 | FAIL (S1–S7 all) | Re-run via `/vibium-mcp-test`; all 7 SKILL.md scenarios confirmed; error string identical; workaround (`|| null`) confirmed still working |
+
 ## Regression skill
 
 [lana-20/vibium-mcp-test](https://github.com/lana-20/vibium-mcp-test) — test MB9

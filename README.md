@@ -2,7 +2,7 @@
 
 A Claude Code skill that runs a full regression suite against the [vibium](https://www.npmjs.com/package/vibium) MCP server — a browser automation tool built on WebDriver BiDi, exposed as Model Context Protocol tools.
 
-The suite covers **8 confirmed bugs** in the vibium MCP layer, verified across 13 sites. Each test maps to a specific MCP tool failure, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps, error strings, and workarounds.
+The suite covers **9 confirmed bugs** in the vibium MCP layer, verified across 14 sites. Each test maps to a specific MCP tool failure, produces a `PASS / FAIL / SKIP` result, and includes exact repro steps, error strings, and workarounds.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Install the skill via Claude Code, then run:
 /vibium-mcp-test
 ```
 
-Claude will execute all 8 tests against the running vibium MCP server and print a summary table.
+Claude will execute all 9 tests against the running vibium MCP server and print a summary table.
 
 ## What it tests
 
@@ -26,6 +26,7 @@ Claude will execute all 8 tests against the running vibium MCP server and print 
 | MB6 | High | P2 | `browser_evaluate` | Empty string `""` result causes MCP `invalid_union` serialization error |
 | MB7 | High | P2 | `browser_fill` | Fails on `<textarea>` elements — `failed to fill:` error |
 | MB8 | Medium | P3 | `browser_screenshot` | `annotate: true` crashes annotation script on all sites |
+| MB9 | Medium | P3 | `browser_get_text` | `invalid_union` error when page or element text content is `""` |
 
 ## Cross-site coverage
 
@@ -34,10 +35,11 @@ Bugs are verified across 13 sites:
 | Site | Tests |
 |------|-------|
 | [testtrack.org](https://testtrack.org) | MB1–MB8 (baseline) |
-| [coffee-cart.app](https://coffee-cart.app/) | MB1, MB2, MB4, MB6, MB8 |
+| [coffee-cart.app](https://coffee-cart.app/) | MB1, MB2, MB4, MB6, MB8, MB9 |
 | [saucedemo.com](https://www.saucedemo.com) | MB1, MB2, MB4, MB5, MB8 |
 | [academybugs.com](https://academybugs.com/) | MB1, MB2, MB4, MB5, MB6, MB8 |
 | [the-internet.herokuapp.com](https://the-internet.herokuapp.com/) | MB1, MB2, MB3, MB4, MB5, MB8 |
+| [cnarios.com](https://www.cnarios.com/concepts/iframe) | MB9 |
 | [automationexercise.com](https://www.automationexercise.com/products) | MB1 |
 | [testpages.eviltester.com](https://testpages.eviltester.com/styled/alerts/alert-test.html) | MB3, MB7 |
 | [automationintesting.online](https://automationintesting.online/#/) | MB7 |
@@ -102,8 +104,9 @@ The suite prints a `PASS / FAIL / SKIP` line per test and a final summary table:
 ║ MB6  ║ High     ║ P2       ║ FAIL                                   ║
 ║ MB7  ║ High     ║ P2       ║ FAIL                                   ║
 ║ MB8  ║ Medium   ║ P3       ║ FAIL                                   ║
+║ MB9  ║ Medium   ║ P3       ║ FAIL                                   ║
 ╠══════╩══════════╩══════════╩════════════════════════════════════════╣
-║  1 PASS   7 FAIL   0 SKIP   (8 total)                                 ║
+║  0 PASS   9 FAIL   0 SKIP   (9 total)                                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
