@@ -1,11 +1,11 @@
 ---
 name: vibium-mcp-test
-description: Regression test suite for 8 known vibium MCP tool bugs (MB1–MB8), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening.
+description: Regression test suite for 9 known vibium MCP tool bugs (MB1–MB9), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening.
 ---
 
 # vibium MCP Regression Test Suite
 
-Run all 8 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8 is P3.
+Run all 9 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8–MB9 are P3.
 
 ## Setup
 
@@ -658,6 +658,48 @@ FAIL (cross-site) if: script exception on any site
 
 ---
 
+### MB9 — `browser_get_text` — invalid_union error on blank pages (Medium · P3)
+
+```
+# Navigate to a blank page (React SPA routing miss)
+browser_navigate { url: "https://www.cnarios.com/concepts/iframe" }
+browser_wait_for_load {}
+browser_get_text {}
+```
+PASS if: returns `""` (empty string)
+FAIL if: `invalid_union` schema error — "Invalid input: expected string, received undefined"
+
+Verify that `browser_get_text` works normally on a page with content:
+```
+browser_navigate { url: "https://www.cnarios.com/" }
+browser_wait_for_load {}
+browser_get_text {}
+```
+PASS if: page text returned normally
+
+**Cross-site hardening** — blank page scenarios on different stacks:
+
+```
+# Cnarios /concepts/multi-window — another React routing miss
+browser_navigate { url: "https://www.cnarios.com/concepts/multi-window" }
+browser_wait_for_load {}
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+**Workaround verification** — confirm `browser_evaluate` with coercion avoids the bug:
+```
+browser_navigate { url: "https://www.cnarios.com/concepts/iframe" }
+browser_wait_for_load {}
+browser_evaluate { expression: "document.body.innerText || null" }
+```
+PASS if: returns `null` (no schema error — null serializes correctly unlike `""`)
+
+PASS (cross-site) if: `browser_get_text` returns `""` on all blank pages tested
+FAIL (cross-site) if: `invalid_union` error on any blank page; workaround required
+
+---
+
 ## Cleanup
 
 ```
@@ -685,8 +727,9 @@ Print a summary table with actual results filled in:
 ║ MB6  ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ║ MB7  ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ║ MB8  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
+║ MB9  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
 ╠══════╩══════════╩══════════╩════════════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (8 total)                                 ║
+║  X PASS   Y FAIL   Z SKIP   (9 total)                                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
