@@ -4,9 +4,9 @@
 
 ## Summary
 
-`browser_get_text` throws an `invalid_union` MCP serialization error whenever the target's text content is empty (`""`). This affects both the full-page form (no selector) and the element form (with selector). `document.body.innerText` returns `""` on blank pages, whitespace-only pages, pages with only hidden elements (`display:none` / `visibility:hidden`), and empty DOM elements. The MCP serializer cannot produce a valid content block from `""` — same root cause as [MB6](./MB6.md) — but unlike MB6, the caller cannot fix it by modifying the expression, because `browser_get_text` does not expose its internal script.
+`browser_get_text` throws an `invalid_union` MCP serialization error whenever the target's text content is empty (`""`). This affects both the full-page form (no selector) and the element form (with selector). `document.body.innerText` returns `""` on blank pages, whitespace-only pages, pages with only hidden elements (`display:none` / `visibility:hidden`), and empty DOM elements. The MCP serializer cannot produce a valid content block from `""` — same root cause as #154 — but unlike `browser_evaluate`, the caller cannot fix it by modifying the expression, because `browser_get_text` does not expose its internal script.
 
-Note: a nonexistent selector gives a different, correct error: `"failed to get text: element not found"`. MB9 is only triggered when the element exists but its text content is empty.
+Note: a nonexistent selector gives a different, correct error: `"failed to get text: element not found"`. This bug is only triggered when the element exists but its text content is empty.
 
 ## Repro
 
@@ -25,7 +25,7 @@ browser_get_text { selector: "#e" }
 
 **Error (identical in both forms):**
 ```json
-[{"code":"invalid_union","errors":[[{"expected":"string","code":"invalid_type","path":["text"],"message":"Invalid input: expected string, received undefined"}], ...]}]
+[{"code":"invalid_union","errors":[[{"expected":"string","code":"invalid_type","path":["text"],"message":"Invalid input: expected string, received undefined"}],[{"code":"invalid_value","values":["image"],"path":["type"],"message":"Invalid input: expected \"image\""},{"expected":"string","code":"invalid_type","path":["data"],"message":"Invalid input: expected string, received undefined"},{"expected":"string","code":"invalid_type","path":["mimeType"],"message":"Invalid input: expected string, received undefined"}],[{"code":"invalid_value","values":["audio"],"path":["type"],"message":"Invalid input: expected \"audio\""},{"expected":"string","code":"invalid_type","path":["data"],"message":"Invalid input: expected string, received undefined"},{"expected":"string","code":"invalid_type","path":["mimeType"],"message":"Invalid input: expected string, received undefined"}],[{"expected":"string","code":"invalid_type","path":["name"],"message":"Invalid input: expected string, received undefined"},{"expected":"string","code":"invalid_type","path":["uri"],"message":"Invalid input: expected string, received undefined"},{"code":"invalid_value","values":["resource_link"],"path":["type"],"message":"Invalid input: expected \"resource_link\""}],[{"code":"invalid_value","values":["resource"],"path":["type"],"message":"Invalid input: expected \"resource\""},{"code":"invalid_union","errors":[[{"expected":"object","code":"invalid_type","path":[],"message":"Invalid input: expected object, received undefined"}],[{"expected":"object","code":"invalid_type","path":[],"message":"Invalid input: expected object, received undefined"}]],"path":["resource"],"message":"Invalid input"}]],"path":["content",0],"message":"Invalid input"}]
 ```
 
 ## Expected
@@ -38,7 +38,7 @@ Returns `invalid_union` serialization error. No text value returned.
 
 ## Scope
 
-Hardened across 9 scenarios (2026-05-18):
+Verified across 7 scenarios:
 
 | # | Scenario | Trigger | Result |
 |---|----------|---------|--------|
@@ -46,19 +46,22 @@ Hardened across 9 scenarios (2026-05-18):
 | S2 | `about:blank` | `browser_navigate { url: "about:blank" }` | FAIL `invalid_union` |
 | S3 | Empty body via `set_content` | `<html><body></body></html>` | FAIL `invalid_union` |
 | S4 | Whitespace-only body | `<html><body>   </body></html>` | FAIL `invalid_union` |
-| S5 | Empty element (selector form) | `browser_get_text { selector: "#empty-div" }` | FAIL `invalid_union` |
-| S6 | Non-empty element (selector form) | `browser_get_text { selector: "#content" }` where content = "hello" | PASS ✓ |
-| S7 | Nonexistent selector | `browser_get_text { selector: "#does-not-exist" }` | `element not found` (different error, correct) |
-| S8 | Dynamically emptied real page | coffee-cart.app with `body.innerHTML = ''` via eval | FAIL `invalid_union` |
-| S9 | Hidden-only content | `<div style="display:none">text</div>` — `innerText` skips hidden elements | FAIL `invalid_union` |
+| S5 | Empty element (selector form) | `browser_get_text { selector: "#e" }` on `<div id='e'></div>` | FAIL `invalid_union` |
+| S6 | Hidden-only content | `<div style="display:none">text</div>` — `innerText` skips hidden elements | FAIL `invalid_union` |
+| S7 | Dynamically emptied real page | coffee-cart.app with `body.innerHTML = ''` via eval | FAIL `invalid_union` |
 
-S9 is particularly insidious: the page has DOM content, but all of it is hidden. `innerText` (which respects CSS visibility) returns `""`, triggering the bug even though `innerHTML` would be non-empty.
+S6 is particularly insidious: the page has DOM content, but all of it is hidden. `innerText` (which respects CSS visibility) returns `""`, triggering the bug even though `innerHTML` is non-empty.
 
-Additional check — `cnarios.com/concepts/multi-window`: now renders a 404 page with visible text (React routing partially fixed on this route) — `browser_get_text` returns content normally. Not a valid repro for MB9 anymore.
+Control — non-empty element returns correctly:
+```
+browser_set_content { html: "<html><body><div id='e'></div><div id='c'>hello</div></body></html>" }
+browser_get_text { selector: "#c" }
+```
+Returns `"hello"` — selector form works when content is non-empty.
 
 ## Root cause
 
-Same as MB6: Go MCP content union serializer cannot produce a `text` content block from `""` — it treats the empty string as `undefined`, failing schema validation. `browser_get_text` internally reads `innerText` (or equivalent), which returns `""` for empty/hidden content. Unlike `browser_evaluate`, the caller cannot add a fallback expression.
+Same as #154: Go MCP content union serializer cannot produce a `text` content block from `""` — it treats the empty string as `undefined`, failing schema validation. `browser_get_text` internally reads `innerText` (or equivalent), which returns `""` for empty/hidden content. Unlike `browser_evaluate`, the caller cannot add a fallback expression.
 
 ## Workaround
 
@@ -72,24 +75,13 @@ browser_evaluate { expression: "document.body.innerText || null" }
 browser_evaluate { expression: "document.querySelector('#e').innerText || null" }
 ```
 
-**Do not use `|| ''`** — that would return an empty string and trigger MB6.
+**Do not use `|| ''`** — that returns an empty string and triggers #154.
 
-Workaround confirmed working across S1, S2, S4 (hidden-only), and S5 (empty element) — all return `null` with no schema error.
+Workaround confirmed working across all 7 scenarios — all return `null` with no schema error.
 
-## Relationship to MB6
+## Relationship to #154
 
-MB6: `browser_evaluate` returning `""` → `invalid_union`
-MB9: `browser_get_text` reading empty text → `invalid_union`
+\#154: `browser_evaluate` returning `""` → `invalid_union`
+This issue: `browser_get_text` reading empty text → `invalid_union`
 
-Same serializer bug. MB9 is less fixable by the caller. Both are resolved by the same underlying fix: treat `""` as a valid empty-string content block rather than coercing it to `undefined`.
-
-## Re-verification history
-
-| Date | Version | Result | Notes |
-|------|---------|--------|-------|
-| 2026-05-18 | v26.3.18 | FAIL (S1–S5, S8–S9) | Initial hardening across 9 scenarios |
-| 2026-05-19 | v26.3.18 | FAIL (S1–S7 all) | Re-run via `/vibium-mcp-test`; all 7 SKILL.md scenarios confirmed; error string identical; workaround (`|| null`) confirmed still working |
-
-## Regression skill
-
-[lana-20/vibium-mcp-test](https://github.com/lana-20/vibium-mcp-test) — test MB9
+Same serializer bug. This issue is less fixable by the caller. Both are resolved by the same underlying fix: treat `""` as a valid empty-string content block rather than coercing it to `undefined`.
