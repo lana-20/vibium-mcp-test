@@ -658,45 +658,92 @@ FAIL (cross-site) if: script exception on any site
 
 ---
 
-### MB9 — `browser_get_text` — invalid_union error on blank pages (Medium · P3)
+### MB9 — `browser_get_text` — invalid_union error when text content is empty (Medium · P3)
 
+Affects both full-page form (no selector) and element form (with selector). Triggered any time `innerText` returns `""`.
+Note: nonexistent selector gives `"element not found"` — a different, correct error. MB9 only fires when the element exists but is empty.
+
+**Scenario A — React SPA routing miss (full-page):**
 ```
-# Navigate to a blank page (React SPA routing miss)
 browser_navigate { url: "https://www.cnarios.com/concepts/iframe" }
-browser_wait_for_load {}
-browser_get_text {}
-```
-PASS if: returns `""` (empty string)
-FAIL if: `invalid_union` schema error — "Invalid input: expected string, received undefined"
-
-Verify that `browser_get_text` works normally on a page with content:
-```
-browser_navigate { url: "https://www.cnarios.com/" }
-browser_wait_for_load {}
-browser_get_text {}
-```
-PASS if: page text returned normally
-
-**Cross-site hardening** — blank page scenarios on different stacks:
-
-```
-# Cnarios /concepts/multi-window — another React routing miss
-browser_navigate { url: "https://www.cnarios.com/concepts/multi-window" }
 browser_wait_for_load {}
 browser_get_text {}
 ```
 PASS if: returns `""`; FAIL if: `invalid_union` error
 
-**Workaround verification** — confirm `browser_evaluate` with coercion avoids the bug:
+**Scenario B — about:blank:**
+```
+browser_navigate { url: "about:blank" }
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+**Scenario C — empty body via set_content:**
+```
+browser_set_content { html: "<html><body></body></html>" }
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+**Scenario D — whitespace-only body:**
+```
+browser_set_content { html: "<html><body>   </body></html>" }
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+**Scenario E — empty element (selector form):**
+```
+browser_set_content { html: "<html><body><div id='e'></div><div id='c'>hello</div></body></html>" }
+browser_get_text { selector: "#e" }
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+Confirm non-empty sibling works:
+```
+browser_get_text { selector: "#c" }
+```
+PASS if: returns `"hello"` (controls for selector form regression)
+
+**Scenario F — hidden-only content (innerText skips display:none):**
+```
+browser_set_content { html: "<html><body><div style='display:none'>hidden text</div><span style='visibility:hidden'>also hidden</span></body></html>" }
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+Note: page has DOM content but all hidden — `innerText` returns `""`, triggering MB9 even though `innerHTML` is non-empty.
+
+**Scenario G — dynamically emptied real page:**
+```
+browser_navigate { url: "https://coffee-cart.app/" }
+browser_wait_for_load {}
+browser_evaluate { expression: "document.body.innerHTML = ''; 'cleared'" }
+browser_get_text {}
+```
+PASS if: returns `""`; FAIL if: `invalid_union` error
+
+**Workaround verification** — `browser_evaluate` with `|| null` (do NOT use `|| ''` — that triggers MB6):
 ```
 browser_navigate { url: "https://www.cnarios.com/concepts/iframe" }
 browser_wait_for_load {}
 browser_evaluate { expression: "document.body.innerText || null" }
 ```
-PASS if: returns `null` (no schema error — null serializes correctly unlike `""`)
+PASS if: returns `null` (serializes correctly); FAIL if: any error
 
-PASS (cross-site) if: `browser_get_text` returns `""` on all blank pages tested
-FAIL (cross-site) if: `invalid_union` error on any blank page; workaround required
+```
+browser_navigate { url: "about:blank" }
+browser_evaluate { expression: "document.body.innerText || null" }
+```
+PASS if: returns `null`
+
+```
+browser_set_content { html: "<html><body><div id='e'></div></body></html>" }
+browser_evaluate { expression: "document.querySelector('#e').innerText || null" }
+```
+PASS if: returns `null`
+
+PASS (overall) if: `browser_get_text` returns `""` on all blank/empty scenarios (A–G)
+FAIL (overall) if: `invalid_union` error on any scenario; workaround (`|| null`) confirmed as mitigation
 
 ---
 
