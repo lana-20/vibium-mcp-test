@@ -747,6 +747,67 @@ FAIL (overall) if: `invalid_union` error on any scenario; workaround (`|| null`)
 
 ---
 
+### MB10 — `browser_click` — false "element is obscured" on sticky nav + z-index + backdrop-filter pages (High · P2)
+
+`browser_click` reports "receivesEvents check failed — element is obscured" on elements that are demonstrably not obscured. Triggered when the page has a nav with `position:sticky` + explicit `z-index` + `backdrop-filter` all three together. Both `@ref` and CSS selector forms fail. CLI `vibium click` is unaffected.
+
+**Primary repro — product card link:**
+```
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
+browser_click { selector: "a[href*='/products/']" }
+```
+PASS if: navigates to product detail page
+FAIL if: `failed to click: timeout after 0s: receivesEvents check failed — element is obscured`
+
+**Secondary repro — Add to Cart button:**
+```
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products/prod_001" }
+browser_scroll { direction: "down", amount: 5 }
+browser_click { selector: "button[style*='d4552a']" }
+```
+PASS if: cart count increments
+FAIL if: `receivesEvents check failed — element is obscured`
+
+**Trigger isolation** — verify all three CSS properties must be present simultaneously:
+```
+# Strip z-index only, keep backdrop-filter
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
+browser_evaluate { expression: "document.querySelector('header').style.zIndex='auto'; 'done'" }
+browser_click { selector: "a[href*='/products/']" }
+```
+PASS if: click succeeds (z-index removed, bug no longer triggered)
+
+```
+# Strip backdrop-filter only, keep z-index:50
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
+browser_evaluate { expression: "var h=document.querySelector('header'); h.style.backdropFilter='none'; h.style.webkitBackdropFilter='none'; 'done'" }
+browser_click { selector: "a[href*='/products/']" }
+```
+PASS if: click succeeds (backdrop-filter removed, bug no longer triggered)
+
+**Workaround verification:**
+```
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
+browser_evaluate { expression: "document.querySelector(\"a[href*='/products/']\").click()" }
+browser_get_url {}
+```
+PASS (workaround A) if: URL changes to `/products/prod_001`
+
+```
+browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
+browser_evaluate { expression: "var r=document.querySelector(\"a[href*='/products/']\").getBoundingClientRect(); Math.round(r.left+r.width/2)+','+Math.round(r.top+r.height/2)" }
+browser_mouse_click { x: 319, y: 823 }
+browser_get_url {}
+```
+PASS (workaround B) if: URL changes to `/products/prod_001`
+
+Note: `set_content` reproductions with the same HTML/CSS structure do not reproduce the bug — it requires the live Next.js/React rendering environment.
+
+PASS if: primary and secondary repros both succeed (bug fixed in `browser_click`)
+FAIL if: either repro gives "element is obscured"; workarounds A or B must succeed
+
+---
+
 ## Cleanup
 
 ```
@@ -775,8 +836,9 @@ Print a summary table with actual results filled in:
 ║ MB7  ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ║ MB8  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
 ║ MB9  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
+║ MB10 ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ╠══════╩══════════╩══════════╩════════════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (9 total)                                 ║
+║  X PASS   Y FAIL   Z SKIP   (10 total)                                ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
