@@ -1,6 +1,6 @@
 ---
 name: vibium-mcp-test
-description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status: MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) new/open."
+description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status: MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) intermittent/open — does not reproduce on every session; hypothesized hydration-timing dependent."
 ---
 
 # vibium MCP Regression Test Suite
@@ -749,6 +749,8 @@ FAIL (overall) if: `invalid_union` error on any scenario; workaround (`|| null`)
 
 ### MB10 — `browser_click` — false "element is obscured" on sticky nav + z-index + backdrop-filter pages (High · P2)
 
+**⚠ Intermittent — does not reproduce on every browser session.** Hypothesized to be hydration-timing dependent: the false positive manifests when `browser_click` fires during a specific window in React's hydration sequence. If the repro steps below pass, the bug is not active in the current session — retry with a fresh `browser_stop` / `browser_start` cycle.
+
 `browser_click` reports "receivesEvents check failed — element is obscured" on elements that are demonstrably not obscured. Triggered when the page has a nav with `position:sticky` + explicit `z-index` + `backdrop-filter` all three together. Both `@ref` and CSS selector forms fail. CLI `vibium click` is unaffected.
 
 **Primary repro — product card link:**
@@ -756,8 +758,8 @@ FAIL (overall) if: `invalid_union` error on any scenario; workaround (`|| null`)
 browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
 browser_click { selector: "a[href*='/products/']" }
 ```
-PASS if: navigates to product detail page
-FAIL if: `failed to click: timeout after 0s: receivesEvents check failed — element is obscured`
+PASS if: navigates to product detail page — **bug not active this session**
+FAIL if: `failed to click: timeout after 0s: receivesEvents check failed — element is obscured` — **bug confirmed**
 
 **Secondary repro — Add to Cart button:**
 ```
@@ -765,8 +767,8 @@ browser_navigate { url: "https://automation-exercise.daisyladybug.com/products/p
 browser_scroll { direction: "down", amount: 5 }
 browser_click { selector: "button[style*='d4552a']" }
 ```
-PASS if: cart count increments
-FAIL if: `receivesEvents check failed — element is obscured`
+PASS if: cart count increments — bug not active
+FAIL if: `receivesEvents check failed — element is obscured` — bug confirmed
 
 **Trigger isolation** — verify all three CSS properties must be present simultaneously:
 ```
