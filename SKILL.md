@@ -1,11 +1,11 @@
 ---
 name: vibium-mcp-test
-description: "Regression test suite for 9 known vibium MCP tool bugs (MB1–MB9), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status: MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151)."
+description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status: MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) new/open."
 ---
 
 # vibium MCP Regression Test Suite
 
-Run all 9 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8–MB9 are P3.
+Run all 10 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8–MB9 are P3, MB10 is P2.
 
 ## Setup
 
