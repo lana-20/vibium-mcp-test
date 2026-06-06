@@ -1,6 +1,6 @@
 ---
 name: vibium-mcp-test
-description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status: MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) intermittent/open — does not reproduce on every session; hypothesized hydration-timing dependent."
+description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status (last run 2026-06-06): MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) intermittent/open — does not reproduce on every session; hypothesized hydration-timing dependent. 9 PASS · 1 FAIL · 0 SKIP."
 ---
 
 # vibium MCP Regression Test Suite
@@ -849,3 +849,39 @@ Cross-site hardening summary — for each FAIL, include:
 - The exact error output observed
 - Whether the symptom matches or differs from the original bug report
 - Whether the documented workaround still resolves it
+
+---
+
+## Last Run Results
+
+**Run date:** 2026-06-06 · **vibium:** v26.5.31 · **9 PASS · 1 FAIL · 0 SKIP**
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║               vibium MCP REGRESSION TEST RESULTS — 2026-06-06                ║
+╠══════╦══════════╦══════════╦══════════════════════════════════════════════════╣
+║ Bug  ║ Severity ║ Priority ║ Result                                           ║
+╠══════╬══════════╬══════════╬══════════════════════════════════════════════════╣
+║ MB1  ║ Critical ║ P1       ║ PASS — integer returned on all 7 sites           ║
+║ MB2  ║ Critical ║ P1       ║ PASS — full JSON storage state on all 6 sites    ║
+║ MB3  ║ Critical ║ P1       ║ FAIL — click→dialog deadlock confirmed; open     ║
+║      ║          ║          ║   workaround (setTimeout) confirmed on 5 sites   ║
+║ MB4  ║ High     ║ P1       ║ PASS — cookie set on all 7 sites, no arg error  ║
+║ MB5  ║ High     ║ P2       ║ PASS — absent attrs return empty; no inv_union  ║
+║ MB6  ║ High     ║ P2       ║ PASS — empty string eval returns empty; no err  ║
+║ MB7  ║ High     ║ P2       ║ PASS — textarea fill works on 4 real-world sites ║
+║ MB8  ║ Medium   ║ P3       ║ PASS — annotated screenshots on all 7 sites      ║
+║ MB9  ║ Medium   ║ P3       ║ PASS — empty text returns empty on all 7 scen.  ║
+║ MB10 ║ High     ║ P2       ║ PASS* — bug not active this session              ║
+╠══════╩══════════╩══════════╩══════════════════════════════════════════════════╣
+║  9 PASS   1 FAIL   0 SKIP   (10 total)                                        ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
+*MB10 is intermittent — PASS means bug not triggered this session, not that it is fixed.
+ The repro site (automation-exercise.daisyladybug.com) retains the triggering CSS.
+ Retry if investigating: sticky + z-index:50 + backdrop-filter:blur(12px) on nav.
+
+**MB3 open details:** `browser_click` on an alert-triggering element hangs the session.
+ Workaround: `browser_evaluate { expression: "setTimeout(() => alert('test'), 300)" }` then `browser_dialog_accept {}`.
+ Deferred upstream as issue #151.
