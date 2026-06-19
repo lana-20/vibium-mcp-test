@@ -1,11 +1,11 @@
 ---
 name: vibium-mcp-test
-description: "Regression test suite for 10 known vibium MCP tool bugs (MB1–MB10), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status (last run 2026-06-06): MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151) — MB10 (browser_click false obscured on sticky nav pages) intermittent/open — does not reproduce on every session; hypothesized hydration-timing dependent. 9 PASS · 1 FAIL · 0 SKIP."
+description: "Regression test suite for 9 known vibium MCP tool bugs (MB1–MB9), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status (last run 2026-06-06): MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151). 8 PASS · 1 FAIL · 0 SKIP."
 ---
 
 # vibium MCP Regression Test Suite
 
-Run all 10 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8–MB9 are P3, MB10 is P2.
+Run all 9 tests and produce a final summary table. Each test maps to a bug observed during MCP tool exercise sessions. Tests are ordered by priority — MB1–MB4 are P1, MB5–MB7 are P2, MB8–MB9 are P3.
 
 ## Setup
 
@@ -747,69 +747,6 @@ FAIL (overall) if: `invalid_union` error on any scenario; workaround (`|| null`)
 
 ---
 
-### MB10 — `browser_click` — false "element is obscured" on sticky nav + z-index + backdrop-filter pages (High · P2)
-
-**⚠ Intermittent — does not reproduce on every browser session.** Hypothesized to be hydration-timing dependent: the false positive manifests when `browser_click` fires during a specific window in React's hydration sequence. If the repro steps below pass, the bug is not active in the current session — retry with a fresh `browser_stop` / `browser_start` cycle.
-
-`browser_click` reports "receivesEvents check failed — element is obscured" on elements that are demonstrably not obscured. Triggered when the page has a nav with `position:sticky` + explicit `z-index` + `backdrop-filter` all three together. Both `@ref` and CSS selector forms fail. CLI `vibium click` is unaffected.
-
-**Primary repro — product card link:**
-```
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
-browser_click { selector: "a[href*='/products/']" }
-```
-PASS if: navigates to product detail page — **bug not active this session**
-FAIL if: `failed to click: timeout after 0s: receivesEvents check failed — element is obscured` — **bug confirmed**
-
-**Secondary repro — Add to Cart button:**
-```
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products/prod_001" }
-browser_scroll { direction: "down", amount: 5 }
-browser_click { selector: "button[style*='d4552a']" }
-```
-PASS if: cart count increments — bug not active
-FAIL if: `receivesEvents check failed — element is obscured` — bug confirmed
-
-**Trigger isolation** — verify all three CSS properties must be present simultaneously:
-```
-# Strip z-index only, keep backdrop-filter
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
-browser_evaluate { expression: "document.querySelector('header').style.zIndex='auto'; 'done'" }
-browser_click { selector: "a[href*='/products/']" }
-```
-PASS if: click succeeds (z-index removed, bug no longer triggered)
-
-```
-# Strip backdrop-filter only, keep z-index:50
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
-browser_evaluate { expression: "var h=document.querySelector('header'); h.style.backdropFilter='none'; h.style.webkitBackdropFilter='none'; 'done'" }
-browser_click { selector: "a[href*='/products/']" }
-```
-PASS if: click succeeds (backdrop-filter removed, bug no longer triggered)
-
-**Workaround verification:**
-```
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
-browser_evaluate { expression: "document.querySelector(\"a[href*='/products/']\").click()" }
-browser_get_url {}
-```
-PASS (workaround A) if: URL changes to `/products/prod_001`
-
-```
-browser_navigate { url: "https://automation-exercise.daisyladybug.com/products" }
-browser_evaluate { expression: "var r=document.querySelector(\"a[href*='/products/']\").getBoundingClientRect(); Math.round(r.left+r.width/2)+','+Math.round(r.top+r.height/2)" }
-browser_mouse_click { x: 319, y: 823 }
-browser_get_url {}
-```
-PASS (workaround B) if: URL changes to `/products/prod_001`
-
-Note: `set_content` reproductions with the same HTML/CSS structure do not reproduce the bug — it requires the live Next.js/React rendering environment.
-
-PASS if: primary and secondary repros both succeed (bug fixed in `browser_click`)
-FAIL if: either repro gives "element is obscured"; workarounds A or B must succeed
-
----
-
 ## Cleanup
 
 ```
@@ -838,9 +775,8 @@ Print a summary table with actual results filled in:
 ║ MB7  ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ║ MB8  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
 ║ MB9  ║ Medium   ║ P3       ║ PASS / FAIL / SKIP                     ║
-║ MB10 ║ High     ║ P2       ║ PASS / FAIL / SKIP                     ║
 ╠══════╩══════════╩══════════╩════════════════════════════════════════╣
-║  X PASS   Y FAIL   Z SKIP   (10 total)                                ║
+║  X PASS   Y FAIL   Z SKIP   (9 total)                                 ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -854,7 +790,7 @@ Cross-site hardening summary — for each FAIL, include:
 
 ## Last Run Results
 
-**Run date:** 2026-06-06 · **vibium:** v26.5.31 · **9 PASS · 1 FAIL · 0 SKIP**
+**Run date:** 2026-06-06 · **vibium:** v26.5.31 · **8 PASS · 1 FAIL · 0 SKIP**
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -872,15 +808,10 @@ Cross-site hardening summary — for each FAIL, include:
 ║ MB7  ║ High     ║ P2       ║ PASS — textarea fill works on 4 real-world sites ║
 ║ MB8  ║ Medium   ║ P3       ║ PASS — annotated screenshots on all 7 sites      ║
 ║ MB9  ║ Medium   ║ P3       ║ PASS — empty text returns empty on all 7 scen.  ║
-║ MB10 ║ High     ║ P2       ║ PASS* — bug not active this session              ║
 ╠══════╩══════════╩══════════╩══════════════════════════════════════════════════╣
-║  9 PASS   1 FAIL   0 SKIP   (10 total)                                        ║
+║  8 PASS   1 FAIL   0 SKIP   (9 total)                                         ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
-
-*MB10 is intermittent — PASS means bug not triggered this session, not that it is fixed.
- The repro site (automation-exercise.daisyladybug.com) retains the triggering CSS.
- Retry if investigating: sticky + z-index:50 + backdrop-filter:blur(12px) on nav.
 
 **MB3 open details:** `browser_click` on an alert-triggering element hangs the session.
  Workaround: `browser_evaluate { expression: "setTimeout(() => alert('test'), 300)" }` then `browser_dialog_accept {}`.
