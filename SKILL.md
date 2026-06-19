@@ -1,6 +1,6 @@
 ---
 name: vibium-mcp-test
-description: "Regression test suite for 9 known vibium MCP tool bugs (MB1–MB9), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status (last run 2026-06-06): MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151). 8 PASS · 1 FAIL · 0 SKIP."
+description: "Regression test suite for 9 known vibium MCP tool bugs (MB1–MB9), ordered by priority and severity (P1 Critical first, P3 Low last). Run after fixes to verify each bug is resolved. Labels PASS/FAIL/SKIP with exact repro steps and cross-site hardening. v26.5.31 status (last run 2026-06-19): MB1 MB2 MB4 MB5 MB6 MB7 MB8 MB9 PASS — MB3 (dialog/click deadlock) still open, deferred (#151). 8 PASS · 1 FAIL · 0 SKIP."
 ---
 
 # vibium MCP Regression Test Suite
@@ -790,7 +790,38 @@ Cross-site hardening summary — for each FAIL, include:
 
 ## Last Run Results
 
-**Run date:** 2026-06-06 · **vibium:** v26.5.31 · **8 PASS · 1 FAIL · 0 SKIP**
+**Run date:** 2026-06-19 · **vibium:** v26.5.31 · **8 PASS · 1 FAIL · 0 SKIP**
+
+```
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║               vibium MCP REGRESSION TEST RESULTS — 2026-06-19                ║
+╠══════╦══════════╦══════════╦══════════════════════════════════════════════════╣
+║ Bug  ║ Severity ║ Priority ║ Result                                           ║
+╠══════╬══════════╬══════════╬══════════════════════════════════════════════════╣
+║ MB1  ║ Critical ║ P1       ║ PASS — integer on all 7 sites; no unmarshal err ║
+║ MB2  ║ Critical ║ P1       ║ PASS — full JSON state; cookies from all sites  ║
+║ MB3  ║ Critical ║ P1       ║ FAIL — click→dialog deadlock; session required  ║
+║      ║          ║          ║   interrupt; workaround confirmed on 3 sites    ║
+║ MB4  ║ High     ║ P1       ║ PASS — cookie set on all 7 sites; no arg error ║
+║ MB5  ║ High     ║ P2       ║ PASS — absent attrs return empty; no inv_union  ║
+║ MB6  ║ High     ║ P2       ║ PASS — empty string returns clean; no inv_union ║
+║ MB7  ║ High     ║ P2       ║ PASS — textarea fill works; 4 real-world sites  ║
+║ MB8  ║ Medium   ║ P3       ║ PASS — annotated screenshots; no script error   ║
+║ MB9  ║ Medium   ║ P3       ║ PASS — empty text returns clean on all 5 scen. ║
+╠══════╩══════════╩══════════╩══════════════════════════════════════════════════╣
+║  8 PASS   1 FAIL   0 SKIP   (9 total)                                         ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+```
+
+**MB3 open details:** `browser_click` on an alert-triggering element hangs the session indefinitely; tool call must be interrupted by user.
+ Workaround: `browser_evaluate { expression: "setTimeout(() => alert('test'), 300)" }` + `browser_sleep { ms: 350 }` then `browser_dialog_accept {}`.
+ Confirmed on the-internet + evil tester + testtrack/alert-demo. Deferred upstream as issue #151.
+
+**Side finding (MB2 run):** testtrack.org localStorage now contains `__lovable_session` + `__lovable_anonymous_id` — site rebuilt on Lovable platform (consistent with MODULE numbered card redesign).
+
+---
+
+## Previous Run — 2026-06-06 · 8 PASS · 1 FAIL · 0 SKIP
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════╗
@@ -812,7 +843,3 @@ Cross-site hardening summary — for each FAIL, include:
 ║  8 PASS   1 FAIL   0 SKIP   (9 total)                                         ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
-
-**MB3 open details:** `browser_click` on an alert-triggering element hangs the session.
- Workaround: `browser_evaluate { expression: "setTimeout(() => alert('test'), 300)" }` then `browser_dialog_accept {}`.
- Deferred upstream as issue #151.
